@@ -1,14 +1,15 @@
-name: CI
+name: Build PicoTorrent
+
 on:
-  pull_request:
   push:
     branches:
-      - feature/**
-      - master
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
-    name: Build
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -16,24 +17,28 @@ jobs:
         os: [windows-latest]
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Setup Git
+      - name: Synchronize submodules
         run: |
-          git fetch --prune --unshallow
+          git submodule sync
           git submodule update --init --recursive
 
-      - name: Restore .NET tools
-        run: dotnet tool restore
+      - name: Set up CMake
+        uses: actions/setup-cmake@v3
 
-      - name: Build
-        run: dotnet cake --platform=${{ matrix.arch }} --target=Publish --vcpkg-triplet=${{ matrix.arch }}-windows-static-md-rel
+      - name: Set up Visual Studio
+        uses: actions/setup-msbuild@v1
 
-      - name: Upload artifacts
+      - name: Configure CMake
+        run: cmake -B build -A ${{ matrix.arch == 'x86' && 'Win32' || 'x64' }}
+
+      - name: Build with CMake
+        run: cmake --build build --config Release
+
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PicoTorrent-${{ matrix.arch }}-CI-binaries
-          path: |
-            build-${{ matrix.arch }}/Release/packages/PicoTorrent-*-${{ matrix.arch }}.exe
-            build-${{ matrix.arch }}/Release/packages/PicoTorrent-*-${{ matrix.arch }}.zip
-            build-${{ matrix.arch }}/Release/packages/PicoTorrent-*-${{ matrix.arch }}.symbols.zip
+          name: PicoTorrent-${{ matrix.arch }}
+          path: build/Release/**
