@@ -30,7 +30,7 @@ jobs:
         run: dotnet cake --platform=${{ matrix.arch }} --target=Publish --vcpkg-triplet=${{ matrix.arch }}-windows-static-md-rel
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: PicoTorrent-${{ matrix.arch }}-CI-binaries
           path: |
