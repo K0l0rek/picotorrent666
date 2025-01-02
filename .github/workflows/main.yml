@@ -1,0 +1,41 @@
+name: Build PicoTorrent for Windows x64
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up vcpkg
+        uses: microsoft/vcpkg-action@v2
+        with:
+          vcpkgGitCommitId: e2b96c63e390fce7c1ac51b88c344d7695d25121
+          triplet: x64-windows
+
+      - name: Install dependencies
+        run: |
+          choco install visualstudio2019buildtools --confirm --accept-license
+          choco install openssl --version=1.1.1 --confirm --accept-license
+          choco install boost-msvc-14.2 --version=1.73.0 --confirm --accept-license
+
+      - name: Configure build
+        run: cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
+
+      - name: Build project
+        run: cmake --build build --config Release --parallel
+
+      - name: Archive build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: PicoTorrent-build
+          path: build/Release/
