@@ -17,28 +17,57 @@ jobs:
         os: [windows-latest]
 
     steps:
+      # Step 1: Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # Step 2: Synchronize submodules
       - name: Synchronize submodules
         run: |
           git submodule sync
           git submodule update --init --recursive
 
+      # Step 3: Install vcpkg and update it
+      - name: Install and bootstrap vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git vendor/vcpkg
+          vendor/vcpkg/bootstrap-vcpkg.bat
+
+      # Step 4: Retry vcpkg package installation
+      - name: Install dependencies with vcpkg
+        run: |
+          for i in {1..3}; do
+            vendor/vcpkg/vcpkg install fmt:x86-windows-static-md-rel fmt:x64-windows-static-md-rel && break;
+            echo "Retrying... ($i/3)"
+          done
+
+      # Step 5: Set up CMake
       - name: Set up CMake
         uses: actions/setup-cmake@v3
 
+      # Step 6: Set up Visual Studio
       - name: Set up Visual Studio
         uses: actions/setup-msbuild@v1
 
+      # Step 7: Configure CMake
       - name: Configure CMake
-        run: cmake -B build -A ${{ matrix.arch == 'x86' && 'Win32' || 'x64' }}
+        run: cmake -B build -A ${{ matrix.arch == 'x86' && 'Win32' || 'x64' }} -DCMAKE_TOOLCHAIN_FILE=vendor/vcpkg/scripts/buildsystems/vcpkg.cmake
 
+      # Step 8: Build the project
       - name: Build with CMake
         run: cmake --build build --config Release
 
+      # Step 9: Upload build artifacts
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: PicoTorrent-${{ matrix.arch }}
           path: build/Release/**
+
+      # Step 10: Upload logs if failure
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: build/**/CMakeFiles/CMakeOutput.log
