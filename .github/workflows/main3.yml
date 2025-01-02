@@ -1,0 +1,60 @@
+name: Build PicoTorrent
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-x86:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up CMake
+        uses: actions/setup-cmake@v3
+
+      - name: Set up Visual Studio
+        uses: actions/setup-msbuild@v1
+
+      - name: Configure CMake
+        run: cmake -B build -A Win32
+
+      - name: Build with CMake
+        run: cmake --build build --config Release
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PicoTorrent-x86
+          path: build/Release/**
+
+  build-x64:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up CMake
+        uses: actions/setup-cmake@v3
+
+      - name: Set up Visual Studio
+        uses: actions/setup-msbuild@v1
+
+      - name: Configure CMake
+        run: cmake -B build -A x64
+
+      - name: Build with CMake
+        run: cmake --build build --config Release
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PicoTorrent-x64
+          path: build/Release/**
